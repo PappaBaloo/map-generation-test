@@ -3,8 +3,10 @@
 #include <time.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include "raymath.h"
+#include "rlgl.h"
 
-//#define DEV_MODE // comment out to remove dev text
+// #define DEV_MODE // comment out to remove dev text
 
 // TODO continue work with corridors
 // make corridors work with all iterations of the map generation
@@ -14,7 +16,7 @@ const int screenHeight = 1080;
 const int screenWidth = 1920;
 const int targetFPS = 60;
 const float mapSectionMarginPercentage = 0.3; // how many % magin from other map sections (1 = 100%)
-const int iterations = 3;                     // iterations for the generator
+const int iterations = 2;                     // iterations for the generator
 const int xySplitRandomizer = 12;
 int xySplitRandomizerThreshold = xySplitRandomizer / 2; // will get bigger/smaller depending on the previous split, this is used to avoid too many x/y slices happening after one another
 const float roomMarginPercentage = 0.1;                 // 1% percision, will be rounded afterwards
@@ -403,18 +405,50 @@ int main()
     srand(time(NULL));
     InitWindow(screenWidth, screenHeight, "map generation test");
     SetTargetFPS(targetFPS);
-    
+
     mapSection_t map = (mapSection_t){
         .area.startPos = (Vector2){0, 0},
         .area.endPos = (Vector2){screenWidth, screenHeight},
         .splitMapSections = NULL};
 
     GenerateBSPMapSections(0, iterations, &map);
+
+    Image image = LoadImage("textures/MainCharacterIdle.png");    // Loading in image for main character texture
+    Texture2D textureMaincharacter = LoadTextureFromImage(image); // Make image into texture
+    UnloadImage(image);                                           // Unload image from CPU memory
+
+    float textureposX = screenWidth / 2 - textureMaincharacter.width / 2; // Floats for the main characters position
+    float textureposY = screenHeight / 2 - textureMaincharacter.height / 2;
+
+    Camera2D characterCamera = {0};
+    characterCamera.target = (Vector2){textureposX + 20.0f, textureposY + 20.0f};
+    characterCamera.offset = (Vector2){screenWidth / 1.8f, screenHeight / 1.7f};
+    characterCamera.zoom = 5;
+
     while (!WindowShouldClose())
     {
-        BeginDrawing();
-        ClearBackground(BLACK);
-        if (IsKeyPressed(KEY_F)) {
+        if (IsKeyDown(KEY_W)) // Keyboard controls for main character
+        {
+            textureposY -= 4.0f;
+        }
+        if (IsKeyDown(KEY_A))
+        {
+            textureposX -= 4.0f;
+        }
+        if (IsKeyDown(KEY_S))
+        {
+            textureposY += 4.0f;
+        }
+        if (IsKeyDown(KEY_D))
+        {
+            textureposX += 4.0f;
+        }
+        characterCamera.target = (Vector2){textureposX + 8, textureposY + 8};
+
+         characterCamera.zoom += ((float)GetMouseWheelMove() * 0.05f);        //Character zoom with scrollwheel
+
+        if (IsKeyPressed(KEY_F))
+        {
             ToggleFullscreen();
         }
         if (IsKeyPressed(KEY_SPACE))
@@ -422,10 +456,25 @@ int main()
             FreeBSPMap(0, iterations, &map);
             GenerateBSPMapSections(0, iterations, &map);
         }
+
         Color colors[] = {RED, YELLOW, GREEN, BLUE};
-        DrawBSPMapSections(0, iterations, map, colors, 0);
+
+        BeginDrawing();
+        ClearBackground(BLACK);
+        // CameraController
+        BeginMode2D(characterCamera);
+        {
+            DrawBSPMapSections(0, iterations, map, colors, 0);
+            DrawTexture(textureMaincharacter, textureposX, textureposY, WHITE);
+            DrawLine((int)characterCamera.target.x, -screenHeight * 10, (int)characterCamera.target.x, screenHeight * 10, GREEN);
+            DrawLine(-screenWidth * 10, (int)characterCamera.target.y, screenWidth * 10, (int)characterCamera.target.y, GREEN);
+        }
+        EndMode2D();
         EndDrawing();
     }
+
+    UnloadTexture(textureMaincharacter); // Unload texture from GPU memory
+
     CloseWindow();
     return 0;
 }
