@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include "raymath.h"
 #include "rlgl.h"
+#include <float.h>
 
 // #define DEV_MODE // comment out to remove dev text
 
@@ -256,6 +257,11 @@ void GenerateCorridor(bool isSlicedOnXAxis, mapSection_t *mapSection, rect_t ran
     puts("waa 4");
 }
 
+void RoomToTile()
+{
+    // printf("value of xwidth 1: %g", xWidth);
+}
+
 void GenerateRoom(rect_t *room, rect_t area)
 {
 #ifdef DEV_MODE
@@ -263,6 +269,12 @@ void GenerateRoom(rect_t *room, rect_t area)
 #endif
     float xWidth = area.endPos.x - area.startPos.x;
     float yWidth = area.endPos.y - area.startPos.y;
+    // Making pointers of Y and X
+    // float *xWidthPointer;
+    // float *yWidthPointer;
+    // xWidthPointer = &xWidth;
+    // yWidthPointer = &yWidth;
+
     Vector2 startPos = {
         // base value is beginning of the section + margin, then adds a random sum between 0 and the map section width - margin and min size (in order to make sure there will always be a min size available)
         area.startPos.x + (xWidth * roomMarginPercentage) + xWidth * ((float)(rand() % (int)(100 - (2 * roomMarginPercentage * 100) - (roomMinSizePercentage * 100))) / 100),
@@ -445,7 +457,7 @@ int main()
         }
         characterCamera.target = (Vector2){textureposX + 8, textureposY + 8};
 
-         characterCamera.zoom += ((float)GetMouseWheelMove() * 0.05f);        //Character zoom with scrollwheel
+        characterCamera.zoom += ((float)GetMouseWheelMove() * 0.05f); // Character zoom with scrollwheel
 
         if (IsKeyPressed(KEY_F))
         {
