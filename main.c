@@ -1,4 +1,4 @@
- #include "raylib.h"
+#include "raylib.h"
 #include <math.h>
 #include <time.h>
 #include <stdlib.h>
@@ -7,7 +7,7 @@
 #include "rlgl.h"
 #include <float.h>
 
-// #define DEV_MODE // comment out to remove dev text
+#define DEV_MODE // comment out to remove dev text
 
 // TODO continue work with corridors
 // make corridors work with all iterations of the map generation
@@ -22,8 +22,8 @@ const int xySplitRandomizer = 12;
 int xySplitRandomizerThreshold = xySplitRandomizer / 2; // will get bigger/smaller depending on the previous split, this is used to avoid too many x/y slices happening after one another
 const float roomMarginPercentage = 0.1;                 // 1% percision, will be rounded afterwards
 const float roomMinSizePercentage = 0.5;                // 1% percision, will be rounded afterwards
-const float constCorridorWidth = 20;                    // set size for corridors
-const float minCorridorWidth = 10;                      // min size tolerance for valid intersects
+const float constCorridorWidth = 4;                     // set size for corridors
+const float minCorridorWidth = 3;                       // min size tolerance for valid intersects
 
 typedef struct rect_t
 {
@@ -38,6 +38,27 @@ typedef struct mapSection_t
     rect_t corridor;
     struct mapSection_t *splitMapSections;
 } mapSection_t;
+
+// Recursive function to get every room in every iteration of the randomly generated map
+void GetRoom(int currentIteration, int *roomsCount, rect_t *rooms, mapSection_t mapSection)
+{
+
+    if (currentIteration <= iterations)
+    {
+        GetRoom(currentIteration + 1, roomsCount, rooms, mapSection.splitMapSections[0]);
+        GetRoom(currentIteration + 1, roomsCount, rooms, mapSection.splitMapSections[1]);
+    }
+    else
+    {
+        rooms[*roomsCount] = mapSection.room;
+        *roomsCount = *roomsCount + 1;
+    }
+}
+
+void GenerateGridRooms(rect_t room)
+{
+    
+}
 
 void FreeBSPMap(int iterationCount, int desiredIterations, mapSection_t *mapSection)
 {
@@ -64,7 +85,7 @@ void DrawCorridor(rect_t corridor)
     Vector2 size = GetRectSize(corridor);
     DrawRectangleV(corridor.startPos, size, PINK);
 #ifdef DEV_MODE
-    DrawText(TextFormat("size: x:%f, y:%f", size.x, size.y), corridor.startPos.x, corridor.startPos.y, 20, PURPLE);
+    // DrawText(TextFormat("size: x:%f, y:%f", size.x, size.y), corridor.startPos.x, corridor.startPos.y, 20, PURPLE);
 #endif
 }
 
@@ -76,11 +97,11 @@ void DrawRoom(rect_t room)
     float textPosY = room.startPos.y + ((room.endPos.y - room.startPos.y) / 2);
     DrawRectangleV(room.startPos, size, PURPLE);
 #ifdef DEV_MODE
-    DrawText(TextFormat("start pos: %.2f, %.2f\n"
-                        "end pos:   %.2f, %.2f\n",
-                        room.startPos.x, room.startPos.y,
-                        room.endPos.x, room.endPos.y),
-             textPosX, textPosY, 20, GREEN);
+    // DrawText(TextFormat("start pos: %.2f, %.2f\n"
+    //                     "end pos:   %.2f, %.2f\n",
+    //                     room.startPos.x, room.startPos.y,
+    //                     room.endPos.x, room.endPos.y),
+    //          textPosX, textPosY, 1, GREEN);
 #endif
 }
 
@@ -105,12 +126,12 @@ void DrawBSPMapSections(int iterationCount, int desiredIterations, mapSection_t 
     }
     DrawCorridor(mapSection.corridor);
 #ifdef DEV_MODE
-    DrawText(TextFormat("%.2f, %.2f", mapSection.splitMapSections[0].area.endPos.x, mapSection.splitMapSections[0].area.endPos.y),
-             mapSection.splitMapSections[0].area.endPos.x,
-             mapSection.splitMapSections[0].area.endPos.y, 10, LIME);
-    DrawText(TextFormat("%.2f, %.2f", mapSection.splitMapSections[1].area.startPos.x, mapSection.splitMapSections[1].area.startPos.y),
-             mapSection.splitMapSections[1].area.startPos.x,
-             mapSection.splitMapSections[1].area.startPos.y, 10, LIME);
+    // DrawText(TextFormat("%.2f, %.2f", mapSection.splitMapSections[0].area.endPos.x, mapSection.splitMapSections[0].area.endPos.y),
+    //          mapSection.splitMapSections[0].area.endPos.x,
+    //          mapSection.splitMapSections[0].area.endPos.y, 10, LIME);
+    // DrawText(TextFormat("%.2f, %.2f", mapSection.splitMapSections[1].area.startPos.x, mapSection.splitMapSections[1].area.startPos.y),
+    //          mapSection.splitMapSections[1].area.startPos.x,
+    //          mapSection.splitMapSections[1].area.startPos.y, 10, LIME);
 #endif
 }
 // early idea of getting valid intersects for bigger map section corridors
@@ -420,7 +441,7 @@ int main()
 
     mapSection_t map = (mapSection_t){
         .area.startPos = (Vector2){0, 0},
-        .area.endPos = (Vector2){screenWidth, screenHeight},
+        .area.endPos = (Vector2){64, 64},
         .splitMapSections = NULL};
 
     GenerateBSPMapSections(0, iterations, &map);
@@ -428,6 +449,10 @@ int main()
     Image image = LoadImage("textures/MainCharacterIdle.png");    // Loading in image for main character texture
     Texture2D textureMaincharacter = LoadTextureFromImage(image); // Make image into texture
     UnloadImage(image);                                           // Unload image from CPU memory
+
+    Image floor1 = LoadImage("textures/wall1Tile.png");     // Loading in image for main character texture
+    Texture2D textureFloor1 = LoadTextureFromImage(floor1); // Make image into texture
+    UnloadImage(floor1);                                    // Unload image from CPU memory
 
     float textureposX = screenWidth / 2 - textureMaincharacter.width / 2; // Floats for the main characters position
     float textureposY = screenHeight / 2 - textureMaincharacter.height / 2;
