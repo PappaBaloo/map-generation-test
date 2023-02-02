@@ -13,6 +13,7 @@
 // make corridors work with all iterations of the map generation
 // (currently only works with the last iteration)
 // split up the large one line equations to multiple smaller lines for improved readability
+const int mapSize = 96;
 const int screenHeight = 1080;
 const int screenWidth = 1920;
 const int targetFPS = 60;
@@ -40,13 +41,13 @@ typedef struct mapSection_t
 } mapSection_t;
 
 // Recursive function to get every room in every iteration of the randomly generated map
-void GetRoom(int currentIteration, int *roomsCount, rect_t *rooms, mapSection_t mapSection)
+void GetRooms(int currentIteration, int *roomsCount, rect_t *rooms, mapSection_t mapSection)
 {
 
     if (currentIteration <= iterations)
     {
-        GetRoom(currentIteration + 1, roomsCount, rooms, mapSection.splitMapSections[0]);
-        GetRoom(currentIteration + 1, roomsCount, rooms, mapSection.splitMapSections[1]);
+        GetRooms(currentIteration + 1, roomsCount, rooms, mapSection.splitMapSections[0]);
+        GetRooms(currentIteration + 1, roomsCount, rooms, mapSection.splitMapSections[1]);
     }
     else
     {
@@ -55,9 +56,71 @@ void GetRoom(int currentIteration, int *roomsCount, rect_t *rooms, mapSection_t 
     }
 }
 
-void GenerateGridRooms(rect_t room)
+void GetCorridors(int currentIteration, int *corridorCount, rect_t *corridors, mapSection_t mapSection)
 {
-    
+
+    if (currentIteration <= iterations)
+    {
+        GetCorridors(currentIteration + 1, corridorCount, corridors, mapSection.splitMapSections[0]);
+        GetCorridors(currentIteration + 1, corridorCount, corridors, mapSection.splitMapSections[1]);
+    }
+    else
+    {
+        corridors[*corridorCount] = mapSection.corridor;
+        *corridorCount = *corridorCount + 1;
+    }
+}
+
+Vector2 TransformMapVectorToTileVector(Vector2 mapVector)
+{
+    return (Vector2){mapVector.x * 64.0, mapVector.y * 64.0};
+}
+
+void GenerateGridRooms(rect_t *rooms, Texture texture)
+{
+    for (int room = 0; room < (int)powf(2, iterations + 1); room++)
+    {
+
+        // TODO have start vector of each room
+        Vector2 tileVectorStart = TransformMapVectorToTileVector(rooms[room].startPos);
+        Vector2 tileVectorEnd = TransformMapVectorToTileVector(rooms[room].endPos);
+        // printf("room start pos: %.2f:%.2f\n", map.room.startPos.x, map.room.startPos.y);
+        // printf("room end pos: %.2f:%.2f\n", map.room.endPos.x, map.room.endPos.y);
+        // printf("vectorstartX: %d - float: %.2f\n", (int)tileVectorStart.x, tileVectorStart.x);
+        // printf("vectorEndX: %d - float: %.2f\n", (int)tileVectorEnd.x, tileVectorEnd.x);
+
+        // printf("vectorstartY: %d - float: %.2f\n", (int)tileVectorStart.y, tileVectorStart.y);
+        // printf("vectorstartY: %d - float: %.2f\n", (int)tileVectorEnd.y, tileVectorEnd.y);
+
+        for (int x = (int)tileVectorStart.x; x < (int)tileVectorEnd.x; x += 64)
+        {
+            puts("function works");
+            for (int y = (int)tileVectorStart.y; y < (int)tileVectorEnd.y; y += 64)
+            {
+                DrawTextureV(texture, (Vector2){x, y}, WHITE);
+                puts("texture drawn");
+            }
+        }
+    }
+}
+
+void GenerateGridCorridors(rect_t *corridors, Texture texture)
+{
+    for (int corridor = 0; corridor < (int)powf(2, iterations + 1); corridor++)
+    {
+
+        Vector2 tileVectorStart = TransformMapVectorToTileVector(corridors[corridor].startPos);
+        Vector2 tileVectorEnd = TransformMapVectorToTileVector(corridors[corridor].endPos);
+
+        for (int x = (int)tileVectorStart.x; x < (int)tileVectorEnd.x; x += 64)
+        {
+            for (int y = (int)tileVectorStart.y; y < (int)tileVectorEnd.y; y += 64)
+            {
+                DrawTextureV(texture, (Vector2){x, y}, WHITE);
+                puts("corridor texture drawn");
+            }
+        }
+    }
 }
 
 void FreeBSPMap(int iterationCount, int desiredIterations, mapSection_t *mapSection)
@@ -278,11 +341,6 @@ void GenerateCorridor(bool isSlicedOnXAxis, mapSection_t *mapSection, rect_t ran
     puts("waa 4");
 }
 
-void RoomToTile()
-{
-    // printf("value of xwidth 1: %g", xWidth);
-}
-
 void GenerateRoom(rect_t *room, rect_t area)
 {
 #ifdef DEV_MODE
@@ -439,9 +497,12 @@ int main()
     InitWindow(screenWidth, screenHeight, "map generation test");
     SetTargetFPS(targetFPS);
 
+    rect_t roomCoords[(int)powf(2, iterations + 1)];
+    rect_t corridorCords[(int)powf(2, iterations + 1)];
+
     mapSection_t map = (mapSection_t){
         .area.startPos = (Vector2){0, 0},
-        .area.endPos = (Vector2){64, 64},
+        .area.endPos = (Vector2){mapSize, mapSize},
         .splitMapSections = NULL};
 
     GenerateBSPMapSections(0, iterations, &map);
@@ -454,6 +515,10 @@ int main()
     Texture2D textureFloor1 = LoadTextureFromImage(floor1); // Make image into texture
     UnloadImage(floor1);                                    // Unload image from CPU memory
 
+    Image floor2 = LoadImage("textures/floor3Tile.png");    // Loading in image for main character texture
+    Texture2D textureFloor2 = LoadTextureFromImage(floor2); // Make image into texture
+    UnloadImage(floor2);                                    // Unload image from CPU memory
+
     float textureposX = screenWidth / 2 - textureMaincharacter.width / 2; // Floats for the main characters position
     float textureposY = screenHeight / 2 - textureMaincharacter.height / 2;
 
@@ -461,6 +526,13 @@ int main()
     characterCamera.target = (Vector2){textureposX + 20.0f, textureposY + 20.0f};
     characterCamera.offset = (Vector2){screenWidth / 1.8f, screenHeight / 1.7f};
     characterCamera.zoom = 5;
+    int roomCount = 0;
+    GetRooms(0, &roomCount, roomCoords, map);
+    roomCount = 0;
+
+    int corridorCount = 0;
+    GetCorridors(0, &corridorCount, corridorCords, map);
+    corridorCount = 0;
 
     while (!WindowShouldClose())
     {
@@ -492,6 +564,10 @@ int main()
         {
             FreeBSPMap(0, iterations, &map);
             GenerateBSPMapSections(0, iterations, &map);
+            GetRooms(0, &roomCount, roomCoords, map);
+            roomCount = 0;
+            GetCorridors(0, &corridorCount, corridorCords, map);
+            corridorCount = 0;
         }
 
         Color colors[] = {RED, YELLOW, GREEN, BLUE};
@@ -501,12 +577,14 @@ int main()
         // CameraController
         BeginMode2D(characterCamera);
         {
+            GenerateGridRooms(roomCoords, textureFloor1);
             DrawBSPMapSections(0, iterations, map, colors, 0);
             DrawTexture(textureMaincharacter, textureposX, textureposY, WHITE);
             DrawLine((int)characterCamera.target.x, -screenHeight * 10, (int)characterCamera.target.x, screenHeight * 10, GREEN);
             DrawLine(-screenWidth * 10, (int)characterCamera.target.y, screenWidth * 10, (int)characterCamera.target.y, GREEN);
         }
         EndMode2D();
+
         EndDrawing();
     }
 
