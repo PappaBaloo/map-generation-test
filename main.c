@@ -13,12 +13,12 @@
 // make corridors work with all iterations of the map generation
 // (currently only works with the last iteration)
 // split up the large one line equations to multiple smaller lines for improved readability
-const int mapSize = 96;
+const int mapSize = 200;
 const int screenHeight = 1080;
 const int screenWidth = 1920;
 const int targetFPS = 60;
 const float mapSectionMarginPercentage = 0.3; // how many % magin from other map sections (1 = 100%)
-const int iterations = 2;                     // iterations for the generator
+const int iterations = 3;                     // iterations for the generator
 const int xySplitRandomizer = 12;
 int xySplitRandomizerThreshold = xySplitRandomizer / 2; // will get bigger/smaller depending on the previous split, this is used to avoid too many x/y slices happening after one another
 const float roomMarginPercentage = 0.1;                 // 1% percision, will be rounded afterwards
@@ -61,13 +61,10 @@ void GetCorridors(int currentIteration, int *corridorCount, rect_t *corridors, m
 
     if (currentIteration <= iterations)
     {
-        GetCorridors(currentIteration + 1, corridorCount, corridors, mapSection.splitMapSections[0]);
-        GetCorridors(currentIteration + 1, corridorCount, corridors, mapSection.splitMapSections[1]);
-    }
-    else
-    {
         corridors[*corridorCount] = mapSection.corridor;
         *corridorCount = *corridorCount + 1;
+        GetCorridors(currentIteration + 1, corridorCount, corridors, mapSection.splitMapSections[0]);
+        GetCorridors(currentIteration + 1, corridorCount, corridors, mapSection.splitMapSections[1]);
     }
 }
 
@@ -94,11 +91,10 @@ void GenerateGridRooms(rect_t *rooms, Texture texture)
 
         for (int x = (int)tileVectorStart.x; x < (int)tileVectorEnd.x; x += 64)
         {
-            puts("function works");
+
             for (int y = (int)tileVectorStart.y; y < (int)tileVectorEnd.y; y += 64)
             {
                 DrawTextureV(texture, (Vector2){x, y}, WHITE);
-                puts("texture drawn");
             }
         }
     }
@@ -106,16 +102,21 @@ void GenerateGridRooms(rect_t *rooms, Texture texture)
 
 void GenerateGridCorridors(rect_t *corridors, Texture texture)
 {
-    for (int corridor = 0; corridor < (int)powf(2, iterations + 1); corridor++)
+
+    puts("swag1");
+    for (int corridor = 0; corridor < (int)((1 - (int)powf(2, iterations + 1)) / (1 - 2)); corridor++)
     {
+        puts("swag2");
 
         Vector2 tileVectorStart = TransformMapVectorToTileVector(corridors[corridor].startPos);
         Vector2 tileVectorEnd = TransformMapVectorToTileVector(corridors[corridor].endPos);
 
         for (int x = (int)tileVectorStart.x; x < (int)tileVectorEnd.x; x += 64)
         {
+            puts("swag3");
             for (int y = (int)tileVectorStart.y; y < (int)tileVectorEnd.y; y += 64)
             {
+                puts("swag4");
                 DrawTextureV(texture, (Vector2){x, y}, WHITE);
                 puts("corridor texture drawn");
             }
@@ -498,7 +499,8 @@ int main()
     SetTargetFPS(targetFPS);
 
     rect_t roomCoords[(int)powf(2, iterations + 1)];
-    rect_t corridorCords[(int)powf(2, iterations + 1)];
+    printf("cool shit %d\n", (int)(1 - (int)powf(2, iterations + 1)) / (int)(1 - 2));
+    rect_t corridorCords[(int)((1 - (int)powf(2, iterations + 1))) / (int)(1 - 2)]; // amount of corridors calculated with geometric series formula
 
     mapSection_t map = (mapSection_t){
         .area.startPos = (Vector2){0, 0},
@@ -577,13 +579,15 @@ int main()
         // CameraController
         BeginMode2D(characterCamera);
         {
+            GenerateGridCorridors(corridorCords, textureFloor2);
             GenerateGridRooms(roomCoords, textureFloor1);
-            DrawBSPMapSections(0, iterations, map, colors, 0);
             DrawTexture(textureMaincharacter, textureposX, textureposY, WHITE);
             DrawLine((int)characterCamera.target.x, -screenHeight * 10, (int)characterCamera.target.x, screenHeight * 10, GREEN);
             DrawLine(-screenWidth * 10, (int)characterCamera.target.y, screenWidth * 10, (int)characterCamera.target.y, GREEN);
         }
         EndMode2D();
+
+        DrawBSPMapSections(0, iterations, map, colors, 0);
 
         EndDrawing();
     }
