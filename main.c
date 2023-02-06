@@ -13,18 +13,25 @@
 // make corridors work with all iterations of the map generation
 // (currently only works with the last iteration)
 // split up the large one line equations to multiple smaller lines for improved readability
-const int mapSize = 200;
+const int mapSize = 184;
 const int screenHeight = 1080;
 const int screenWidth = 1920;
 const int targetFPS = 60;
 const float mapSectionMarginPercentage = 0.3; // how many % magin from other map sections (1 = 100%)
-const int iterations = 3;                     // iterations for the generator
+const int iterations = 2;                     // iterations for the generator
 const int xySplitRandomizer = 12;
 int xySplitRandomizerThreshold = xySplitRandomizer / 2; // will get bigger/smaller depending on the previous split, this is used to avoid too many x/y slices happening after one another
 const float roomMarginPercentage = 0.1;                 // 1% percision, will be rounded afterwards
 const float roomMinSizePercentage = 0.5;                // 1% percision, will be rounded afterwards
 const float constCorridorWidth = 4;                     // set size for corridors
 const float minCorridorWidth = 3;                       // min size tolerance for valid intersects
+
+typedef struct playerPoint
+{
+    Vector2 position;
+    Vector2 size;
+    Color color;
+} playerPoint;
 
 typedef struct rect_t
 {
@@ -103,22 +110,17 @@ void GenerateGridRooms(rect_t *rooms, Texture texture)
 void GenerateGridCorridors(rect_t *corridors, Texture texture)
 {
 
-    puts("swag1");
     for (int corridor = 0; corridor < (int)((1 - (int)powf(2, iterations + 1)) / (1 - 2)); corridor++)
     {
-        puts("swag2");
 
         Vector2 tileVectorStart = TransformMapVectorToTileVector(corridors[corridor].startPos);
         Vector2 tileVectorEnd = TransformMapVectorToTileVector(corridors[corridor].endPos);
 
         for (int x = (int)tileVectorStart.x; x < (int)tileVectorEnd.x; x += 64)
         {
-            puts("swag3");
             for (int y = (int)tileVectorStart.y; y < (int)tileVectorEnd.y; y += 64)
             {
-                puts("swag4");
                 DrawTextureV(texture, (Vector2){x, y}, WHITE);
-                puts("corridor texture drawn");
             }
         }
     }
@@ -499,7 +501,6 @@ int main()
     SetTargetFPS(targetFPS);
 
     rect_t roomCoords[(int)powf(2, iterations + 1)];
-    printf("cool shit %d\n", (int)(1 - (int)powf(2, iterations + 1)) / (int)(1 - 2));
     rect_t corridorCords[(int)((1 - (int)powf(2, iterations + 1))) / (int)(1 - 2)]; // amount of corridors calculated with geometric series formula
 
     mapSection_t map = (mapSection_t){
@@ -524,6 +525,13 @@ int main()
     float textureposX = screenWidth / 2 - textureMaincharacter.width / 2; // Floats for the main characters position
     float textureposY = screenHeight / 2 - textureMaincharacter.height / 2;
 
+    playerPoint playerI;
+    playerI.position.x = textureposX / 64.0f;
+    playerI.position.y = textureposY / 64.0f;
+    playerI.size.x = 5;
+    playerI.size.y = 5;
+    playerI.color = RED;
+
     Camera2D characterCamera = {0};
     characterCamera.target = (Vector2){textureposX + 20.0f, textureposY + 20.0f};
     characterCamera.offset = (Vector2){screenWidth / 1.8f, screenHeight / 1.7f};
@@ -541,22 +549,32 @@ int main()
         if (IsKeyDown(KEY_W)) // Keyboard controls for main character
         {
             textureposY -= 4.0f;
+            playerI.position.y -= 0.0625f;
         }
         if (IsKeyDown(KEY_A))
         {
             textureposX -= 4.0f;
+            playerI.position.x -= 0.0625f;
         }
         if (IsKeyDown(KEY_S))
         {
             textureposY += 4.0f;
+            playerI.position.y += 0.0625;
         }
         if (IsKeyDown(KEY_D))
         {
             textureposX += 4.0f;
+            playerI.position.x += 0.0625f;
         }
         characterCamera.target = (Vector2){textureposX + 8, textureposY + 8};
 
         characterCamera.zoom += ((float)GetMouseWheelMove() * 0.05f); // Character zoom with scrollwheel
+
+        printf("characterTextureX: %2f", textureposX);
+        printf("characterTextureY: %2f", textureposX);
+
+        printf("pointX: %2f", playerI.position.x);
+        printf("pointX: %2f", playerI.position.y);
 
         if (IsKeyPressed(KEY_F))
         {
@@ -588,6 +606,7 @@ int main()
         EndMode2D();
 
         DrawBSPMapSections(0, iterations, map, colors, 0);
+        DrawRectangleV(playerI.position, playerI.size, playerI.color);
 
         EndDrawing();
     }
